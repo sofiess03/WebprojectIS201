@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snakes and Ladders</title>
+  <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f0f8ff;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-family: 'Luckiest Guy', cursive;
+      font-size: 3em;
+      color: #ff5c5c;
+      text-shadow: 2px 2px 0 #fff, 4px 4px 0 #ffc107;
+    }
+
+    .emoji-select {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+
+    .emoji-option {
+      font-size: 30px;
+      margin: 5px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      padding: 5px;
+      transition: transform 0.2s;
+    }
+
+    .emoji-option:hover {
+      transform: scale(1.2);
+    }
+
+    .selected {
+      border-color: #4caf50;
+      background-color: #d4edda;
+      border-radius: 5px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(10, 50px);
+      grid-template-rows: repeat(10, 50px);
+      gap: 1px;
+      margin: 20px auto;
+      width: max-content;
+    }
+
+    .cell {
+      width: 50px;
+      height: 50px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      position: relative;
+      font-size: 12px;
+      padding: 2px;
+    }
+
+    .cell span {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      font-size: 10px;
+      color: #888;
+    }
+
+    .snake::after {
+      content: "🐍";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      font-size: 16px;
+    }
+
+    .ladder::after {
+      content: "🪜";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      font-size: 16px;
+    }
+
+    .token {
+      font-size: 20px;
+      position: absolute;
+      z-index: 2;
+    }
+
+    .player1-token {
+      top: 2px;
+      left: 2px;
+    }
+
+    .player2-token {
+      bottom: 2px;
+      right: 2px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+    }
+
+    #dice {
+      font-size: 50px;
+      margin: 10px;
+      animation: none;
+      display: inline-block;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    #scoreboard {
+      margin-top: 15px;
+      font-size: 18px;
+    }
+
+    @keyframes shake {
+      0% { transform: rotate(0deg); }
+      25% { transform: rotate(20deg); }
+      50% { transform: rotate(-20deg); }
+      75% { transform: rotate(10deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .rolling {
+      animation: shake 0.5s;
+    }
+    .nav-bar ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    gap: 60px;
+    }
+
+    .nav-bar a {
+        font-family: 'Luckiest Guy', cursive;
+        font-size: 1.4em;
+        color: #ff5c5c;
+        text-decoration: none;
+        text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ffc107;
+        transition: transform 0.2s ease, color 0.3s ease;
+    }
+
+    .nav-bar a:hover {
+        transform: scale(1.1);
+        color: #d43f3f;
+        text-shadow: 2px 2px 0 #fff, 4px 4px 0 #ffc107;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎲 Snakes & Ladders 🐍</h1>
+  <div class="nav-bar">
+    <a href="Scratch.html">Adventures</a>
+    <a href="index.html">Home</a>
+  </div>
+
+  <!-- Character Selection Screen -->
+  <div id="character-select">
+    <h2>Choose your character</h2>
+    <div>
+      <strong>Player 1:</strong>
+      <div class="emoji-select" id="player1-choices"></div>
+    </div>
+    <div>
+      <strong>Player 2:</strong>
+      <div class="emoji-select" id="player2-choices"></div>
+    </div>
+    <button onclick="startGame()" id="start-button" disabled>Start Game</button>
+  </div>
+
+  <!-- Game Area -->
+  <div id="game-area" class="hidden">
+    <div class="board" id="board"></div>
+    <div>
+      <div id="dice">🎲</div><br>
+      <button onclick="rollDice()">Roll Dice</button>
+    </div>
+    <div id="status">Player 1's turn</div>
+    <div id="scoreboard"></div>
+  </div>
+
+  <script>
+    const emojis = ['🚀','🐸','👸','🧙‍♂️','🐴','💀','👽','💩','🧛‍♀️'];
+    let playerEmojis = { 1: '', 2: '' };
+    let currentPlayer = 1;
+    const positions = { 1: 1, 2: 1 };
+
+    const snakes = {
+      16: 6, 47: 26, 49: 11, 56: 53, 62: 19,
+      64: 60, 87: 24, 93: 73, 95: 75, 98: 78,
+    };
+
+    const ladders = {
+      1: 38, 4: 14, 9: 31, 21: 42, 28: 84,
+      36: 44, 51: 67, 71: 91, 80: 100,
+    };
+
+    function createEmojiOptions(playerId) {
+      const container = document.getElementById(`player${playerId}-choices`);
+      emojis.forEach(emoji => {
+        const div = document.createElement('div');
+        div.className = 'emoji-option';
+        div.textContent = emoji;
+        div.onclick = () => {
+          playerEmojis[playerId] = emoji;
+          Array.from(container.children).forEach(c => c.classList.remove('selected'));
+          div.classList.add('selected');
+
+          if (playerEmojis[1] && playerEmojis[2] && playerEmojis[1] === playerEmojis[2]) {
+            alert("Pick different emojis!");
+            playerEmojis[playerId] = '';
+            div.classList.remove('selected');
+          }
+
+          document.getElementById('start-button').disabled = !(playerEmojis[1] && playerEmojis[2]);
+        };
+        container.appendChild(div);
+      });
+    }
+
+    createEmojiOptions(1);
+    createEmojiOptions(2);
+
+    function startGame() {
+      document.getElementById('character-select').classList.add('hidden');
+      document.getElementById('game-area').classList.remove('hidden');
+      drawBoard();
+      updateScoreboard();
+    }
+
+    function drawBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      for (let i = 100; i > 0; i--) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if (snakes[i]) cell.classList.add('snake');
+        if (ladders[i]) cell.classList.add('ladder');
+
+        const cellNumber = document.createElement('span');
+        cellNumber.textContent = i;
+        cell.appendChild(cellNumber);
+
+        if (positions[1] === i) {
+          const token = document.createElement('div');
+          token.className = 'token player1-token';
+          token.textContent = playerEmojis[1];
+          cell.appendChild(token);
+        }
+        if (positions[2] === i) {
+          const token = document.createElement('div');
+          token.className = 'token player2-token';
+          token.textContent = playerEmojis[2];
+          cell.appendChild(token);
+        }
+
+        board.appendChild(cell);
+      }
+    }
+
+    function updateScoreboard() {
+      document.getElementById('scoreboard').innerHTML = `
+        🧮 <strong>Scoreboard:</strong><br>
+        ${playerEmojis[1]} Player 1: ${positions[1]}<br>
+        ${playerEmojis[2]} Player 2: ${positions[2]}
+      `;
+    }
+
+    function rollDice() {
+      const diceDisplay = document.getElementById('dice');
+      diceDisplay.classList.add('rolling');
+
+      setTimeout(() => {
+        diceDisplay.classList.remove('rolling');
+        const roll = Math.floor(Math.random() * 6) + 1;
+        diceDisplay.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][roll - 1];
+
+        let pos = positions[currentPlayer] + roll;
+        if (pos > 100) pos = positions[currentPlayer];
+
+        if (snakes[pos]) {
+          alert(`🐍 Oh no! Player ${currentPlayer} hit a snake!`);
+          pos = snakes[pos];
+        } else if (ladders[pos]) {
+          alert(`🪜 Yay! Player ${currentPlayer} climbed a ladder!`);
+          pos = ladders[pos];
+        }
+
+        positions[currentPlayer] = pos;
+        drawBoard();
+        updateScoreboard();
+
+        if (pos === 100) {
+          document.getElementById('status').innerText = `🎉 Player ${currentPlayer} wins!`;
+          return;
+        }
+
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        document.getElementById('status').innerText = `Player ${currentPlayer}'s turn`;
+      }, 500);
+    }
+  </script>
+</body>
+</html>
